@@ -1,0 +1,41 @@
+[
+  {"id": "i", "label": "Version I", "term": "1-2025", "status": "unavailable"},
+  {"id": "ii", "label": "Version II", "term": "2-2025", "status": "unavailable"},
+  {
+    "id": "iii",
+    "label": "Version III",
+    "term": "2-2026",
+    "status": "available",
+    "title": "Rayo Joakin Cup III",
+    "course": "IMT-322 · Embedded Systems II",
+    "date": "Thursday, November 19, 2026",
+    "room": "C202",
+    "overview": "The competition evaluates how modular, adaptable, and robust each team’s embedded system is. Vehicles must support configuration on event day through software parameters or serial commands.",
+    "platform": "Raspberry Pi 5 with a Tiva C or Raspberry Pi Pico W",
+    "modules": [
+      {
+        "id": "A",
+        "title": "Real-Time Visual Tracking & Closed-Loop Control",
+        "description": "Use HSV color segmentation on the Raspberry Pi 5 to detect the target and estimate its offset and distance. Send the measurements over serial to a proportional or PID differential controller. Follow a moving target at 25–45 cm while maintaining sight and avoiding collisions during sudden stops."
+      },
+      {
+        "id": "B",
+        "title": "Visual State Machine & Timed Actuation (Timed FSM)",
+        "description": "Recognize and store a sequence of colors under varying lighting. Translate it into an ordered action queue and use the microcontroller to execute moves and LED patterns with configurable durations received over serial."
+      },
+      {
+        "id": "C",
+        "title": "Reactive Arena Navigation & Perimeter Boundary Safety",
+        "description": "Sweep rotationally to center a target in the camera frame. Give floor reflectance or forward distance sensors priority on the microcontroller. When the vehicle detects the boundary, interrupt navigation, brake, reverse, and turn away before resuming the search."
+      },
+      {
+        "id": "D",
+        "title": "Real-Time Wireless Teleoperation",
+        "description": "Control throttle and steering with low latency over Bluetooth or Wi-Fi using a controller, smartphone, or PC."
+      }
+    ],
+    "teams": [],
+    "criteria": ["Modularity", "Autonomy", "Robustness", "Smoothness", "Ease of operation"],
+    "announcements": "Target colors, sequence lengths, arena dimensions, specific operational rules, wireless mystery challenge rules, and further evaluation details will be announced on event day."
+  }
+]
