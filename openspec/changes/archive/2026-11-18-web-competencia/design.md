@@ -8,7 +8,7 @@ Use stable paths such as `/` and `/editions/iii` so an edition can be opened dir
 
 Use bold typography, angled panels, and high-contrast accents to evoke futuristic racing while keeping the artwork and interface original. Use semantic HTML, responsive CSS, and visible keyboard focus. Keep visual effects secondary to readability.
 
-Use [Rayo Joakin Cup III Guidelines](../../../Rayo_Joakin_Cup_III_Guidelines.docx) as the content reference. The cover supplies the course, logistics, and platform. Part I sections 1–3 supply the competition philosophy, module descriptions, and criteria. For any ambiguity, record the owner's clarification in this change and revise the delta before implementation.
+Use [Rayo Joakin Cup III Guidelines](../../../../Rayo_Joakin_Cup_III_Guidelines.docx) as the content reference. The cover supplies the course, logistics, and platform. Part I sections 1–3 supply the competition philosophy, module descriptions, and criteria. For any ambiguity, record the owner's clarification in this change and revise the delta before implementation.
 
 The homepage starts with the edition selector. Available editions show logistics and an overview, then Challenges, Teams, and Evaluation. Challenges uses the official module names and technical content. Use near-black surfaces, white text and focus outlines, and a checkered-flag pattern confined to the banner edge.
 
