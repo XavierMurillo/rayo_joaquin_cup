@@ -56,4 +56,6 @@ Vite proxies `/api` to `http://127.0.0.1:8000`. Set the `API_TARGET` environment
 
 Edition data lives in `backend/editions.json`. Restart the API after editing it. Verify changes against the competition guidelines and record changes to website behavior in the active OpenSpec delta.
 
-To publish a team, place the vehicle photo under `frontend/public/team-photos/` and add a record to the relevant edition's `teams` list with `id`, `name`, `description`, `photoUrl` (for example, `/team-photos/team-name.webp`), and `photoAlt` (a short description of the vehicle in the photo).
+To create a team, open an available edition, go to **Teams**, and select **Add team**. Enter a name and choose a local JPEG, PNG, or WebP vehicle photo up to 5 MiB. The description and card background color are optional.
+
+The API stores new teams and photos in `backend/runtime/teams.sqlite3`. Set `TEAM_DATABASE_PATH` before starting the API to use a different database file. The default runtime database is excluded from Git. Existing teams listed in the edition JSON still appear.
