@@ -20,23 +20,34 @@ function render(edition) {
 
 test('opens each challenge with its own instructions, pending details, and illustration', () => {
   const { modules } = editions.find(({ id }) => id === 'iii')
+  const savedOrders = { A: [{ id: 'one', name: 'First Team' }, { id: 'two', name: 'Second Team' }] }
   let opened = 0
   let focusReturns = 0
   let view
   act(() => {
-    view = create(React.createElement(ChallengeList, { modules }), {
+    view = create(React.createElement(ChallengeList, { modules, savedOrders }), {
       createNodeMock: (node) => node.type === 'dialog'
         ? { showModal: () => { opened += 1 } }
         : null,
     })
   })
 
-  for (const { challenge } of modules) {
+  assert.deepEqual(view.root.findByType('ol').findAllByType('li')
+    .map((item) => item.children.join('')), ['First Team', 'Second Team'])
+
+  for (const { id, challenge } of modules) {
     const trigger = view.root.findByProps({ 'aria-label': `View challenge details for ${challenge.name}` })
     act(() => trigger.props.onClick({ currentTarget: { focus: () => { focusReturns += 1 } } }))
     const dialog = view.root.findByType('dialog')
     assert.equal(dialog.findByType('h2').children.join(''), challenge.name)
-    assert.deepEqual(dialog.findAllByType('li').map((item) => item.children.join('')), challenge.pending)
+    assert.deepEqual(dialog.findByType('ul').findAllByType('li')
+      .map((item) => item.children.join('')), challenge.pending)
+    const runningOrder = dialog.findAllByType('ol')
+    assert.equal(runningOrder.length, id === 'A' ? 1 : 0)
+    if (id === 'A') {
+      assert.deepEqual(runningOrder[0].findAllByType('li')
+        .map((item) => item.children.join('')), ['First Team', 'Second Team'])
+    }
     assert.ok(dialog.findAllByType('h3').some((heading) => heading.children.join('') === 'Awaiting release'))
     const photo = dialog.findByType('img')
     assert.equal(photo.props.src, challenge.visual.src)

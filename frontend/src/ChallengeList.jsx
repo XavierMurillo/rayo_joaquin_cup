@@ -1,6 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react'
 
-function ChallengeDialog({ challenge, onClose }) {
+function SavedRunningOrder({ order }) {
+  if (!order?.length) return null
+
+  return (
+    <div className="challenge-saved-order">
+      <h4>Saved running order</h4>
+      <ol>{order.map((team) => <li key={team.id}>{team.name}</li>)}</ol>
+    </div>
+  )
+}
+
+function ChallengeDialog({ challenge, savedOrder, onClose }) {
   const dialog = useRef(null)
 
   useEffect(() => {
@@ -27,6 +38,7 @@ function ChallengeDialog({ challenge, onClose }) {
               <ul>{challenge.pending.map((item) => <li key={item}>{item}</li>)}</ul>
             </section>
           )}
+          <SavedRunningOrder order={savedOrder} />
         </div>
         {challenge.visual && (
           <figure className="challenge-visual">
@@ -39,7 +51,7 @@ function ChallengeDialog({ challenge, onClose }) {
   )
 }
 
-export function ChallengeList({ modules }) {
+export function ChallengeList({ modules, savedOrders = {} }) {
   const [selected, setSelected] = useState(null)
   const opener = useRef(null)
 
@@ -51,6 +63,7 @@ export function ChallengeList({ modules }) {
             <h3><span className="module-letter">{id}</span>{challenge?.name ?? title}</h3>
             {challenge && <p className="challenge-module">{title}</p>}
             <p>{description}</p>
+            <SavedRunningOrder order={savedOrders[id]} />
             {challenge && (
               <button
                 type="button"
@@ -58,7 +71,7 @@ export function ChallengeList({ modules }) {
                 aria-label={`View challenge details for ${challenge.name}`}
                 onClick={(event) => {
                   opener.current = event.currentTarget
-                  setSelected(challenge)
+                  setSelected({ id, challenge })
                 }}
               >
                 View challenge details
@@ -68,7 +81,7 @@ export function ChallengeList({ modules }) {
         ))}
       </ul>
       {selected && (
-        <ChallengeDialog challenge={selected} onClose={() => {
+        <ChallengeDialog challenge={selected.challenge} savedOrder={savedOrders[selected.id]} onClose={() => {
           setSelected(null)
           opener.current?.focus()
         }} />

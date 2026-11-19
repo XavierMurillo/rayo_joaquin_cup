@@ -2,31 +2,32 @@ import React, { useRef, useState } from 'react'
 import { ChallengeList } from './ChallengeList.jsx'
 import { TeamForm } from './TeamForm.jsx'
 import { TeamRoster } from './TeamRoster.jsx'
+import { TeamRoulette } from './TeamRoulette.jsx'
+import { loadSavedOrder, savedOrderKey, storeDraw } from './roulette.js'
 
-function TeamsSection({ editionId, teams }) {
+function TeamsSection({ editionId, teams, setTeams }) {
   const [adding, setAdding] = useState(false)
-  const [visibleTeams, setVisibleTeams] = useState(teams)
   const [message, setMessage] = useState('')
   const addButton = useRef(null)
   const section = useRef(null)
 
   function onCreated(team) {
-    setVisibleTeams((current) => [...current, team])
+    setTeams((current) => [...current, team])
     setAdding(false)
     setMessage(`${team.name} was added.`)
   }
 
   function onUpdated(team) {
-    setVisibleTeams((current) => current.map((item) => item.id === team.id ? team : item))
+    setTeams((current) => current.map((item) => item.id === team.id ? team : item))
   }
 
   function onDeleted(team) {
-    setVisibleTeams((current) => current.filter((item) => item.id !== team.id))
+    setTeams((current) => current.filter((item) => item.id !== team.id))
     setMessage(`${team.name} was deleted.`)
   }
 
   return (
-    <section className="detail-section" id="teams" tabIndex={-1} ref={section}>
+    <section className="detail-section teams-section" id="teams" tabIndex={-1} ref={section}>
       <div className="teams-heading">
         <h2>Teams</h2>
         {!adding && (
@@ -37,12 +38,12 @@ function TeamsSection({ editionId, teams }) {
         <TeamForm editionId={editionId} onSaved={onCreated} onCancel={() => setAdding(false)} />
       )}
       {message && <p role="status">{message}</p>}
-      {visibleTeams.length === 0 ? (
+      {teams.length === 0 ? (
         <p>Team details are not available yet.</p>
       ) : (
         <TeamRoster
           editionId={editionId}
-          teams={visibleTeams}
+          teams={teams}
           onUpdated={onUpdated}
           onDeleted={onDeleted}
           focusFallback={() => (addButton.current ?? section.current)?.focus()}
@@ -53,6 +54,10 @@ function TeamsSection({ editionId, teams }) {
 }
 
 export function EditionDetails({ edition }) {
+  const [teams, setTeams] = useState(() => edition.teams ?? [])
+  const [savedOrders, setSavedOrders] = useState(() => Object.fromEntries(
+    (edition.modules ?? []).map(({ id }) => [id, loadSavedOrder(edition.id, id)]),
+  ))
   if (edition.status === 'unavailable') {
     return (
       <section className="hero">
@@ -61,6 +66,16 @@ export function EditionDetails({ edition }) {
         <p>Edition details unavailable.</p>
       </section>
     )
+  }
+
+  const rouletteChallenges = edition.id === 'iii'
+    ? edition.modules.filter(({ id, challenge }) => challenge && (id === 'A' || id === 'B'))
+    : []
+
+  function saveOrder(challengeId, draw) {
+    if (!storeDraw(savedOrderKey(edition.id, challengeId), draw)) return false
+    setSavedOrders((current) => ({ ...current, [challengeId]: draw.order }))
+    return true
   }
 
   return (
@@ -84,10 +99,10 @@ export function EditionDetails({ edition }) {
         <h2>Challenges</h2>
         <p><strong>Platform:</strong> {edition.platform}</p>
         <p>All four modules must be integrated, tested, and ready to run.</p>
-        <ChallengeList modules={edition.modules} />
+        <ChallengeList modules={edition.modules} savedOrders={savedOrders} />
       </section>
-      <TeamsSection editionId={edition.id} teams={edition.teams ?? []} />
-      <section className="detail-section" id="evaluation">
+      <TeamsSection editionId={edition.id} teams={teams} setTeams={setTeams} />
+      <section className="detail-section evaluation-section" id="evaluation">
         <h2>Evaluation</h2>
         <ul className="criteria">
           {edition.criteria.map((criterion) => <li key={criterion}>{criterion}</li>)}
@@ -96,6 +111,15 @@ export function EditionDetails({ edition }) {
           <h3>Event-day announcements</h3>
           <p>{edition.announcements}</p>
         </div>
+        {rouletteChallenges.length === 2 && (
+          <TeamRoulette
+            editionId={edition.id}
+            challenges={rouletteChallenges}
+            teams={teams}
+            savedOrders={savedOrders}
+            onSave={saveOrder}
+          />
+        )}
       </section>
     </>
   )
