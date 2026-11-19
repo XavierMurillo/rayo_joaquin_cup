@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { ChallengeWinner } from './ChallengeWinner.jsx'
 import { drawStorageKey, drawTeam, loadDraw, storeDraw } from './roulette.js'
 
 const spinDuration = 1000
@@ -120,7 +121,7 @@ function ChallengeDraw({ storageKey, teams, onSpinning, onSave, savedOrder }) {
   )
 }
 
-export function TeamRoulette({ editionId, challenges, teams, savedOrders, onSave }) {
+export function TeamRoulette({ editionId, challenges, teams, savedOrders, onSave, winners, onConfirmWinner }) {
   const [selected, setSelected] = useState(challenges[0].id)
   const [spinning, setSpinning] = useState(false)
   return (
@@ -143,6 +144,7 @@ export function TeamRoulette({ editionId, challenges, teams, savedOrders, onSave
               savedOrder={savedOrders[id]}
               onSave={(draw) => onSave(id, draw)}
             />
+            <ChallengeWinner teams={teams} winner={winners[id]} onConfirm={(team) => onConfirmWinner(id, team)} />
           </div>
         )
       })}

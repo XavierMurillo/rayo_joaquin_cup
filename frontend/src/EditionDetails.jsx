@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { ChallengeList } from './ChallengeList.jsx'
 import { ChallengeBrackets } from './ChallengeBrackets.jsx'
+import { loadWinner, saveWinner } from './challengeWinners.js'
 import { loadBracket, saveBracket } from './brackets.js'
 import { TeamForm } from './TeamForm.jsx'
 import { TeamRoster } from './TeamRoster.jsx'
@@ -64,6 +65,9 @@ export function EditionDetails({ edition }) {
     C: loadBracket(edition.id, 'C'), D: loadBracket(edition.id, 'D'),
   } : {})
   const [bracketChallenge, setBracketChallenge] = useState('C')
+  const [winners, setWinners] = useState(() => edition.id === 'iii' ? {
+    A: loadWinner(edition.id, 'A'), B: loadWinner(edition.id, 'B'),
+  } : {})
   if (edition.status === 'unavailable') {
     return (
       <section className="hero">
@@ -92,6 +96,13 @@ export function EditionDetails({ edition }) {
     return true
   }
 
+  function confirmWinner(challengeId, { id, name }) {
+    const winner = { id, name }
+    if (!saveWinner(edition.id, challengeId, winner)) return false
+    setWinners((current) => ({ ...current, [challengeId]: winner }))
+    return true
+  }
+
   return (
     <>
       <div className="hero">
@@ -117,6 +128,7 @@ export function EditionDetails({ edition }) {
           modules={edition.modules}
           savedOrders={savedOrders}
           brackets={brackets}
+          winners={winners}
           onChooseBracket={bracketChallenges.length === 2 ? setBracketChallenge : undefined}
         />
       </section>
@@ -137,6 +149,8 @@ export function EditionDetails({ edition }) {
             teams={teams}
             savedOrders={savedOrders}
             onSave={saveOrder}
+            winners={winners}
+            onConfirmWinner={confirmWinner}
           />
         )}
         {bracketChallenges.length === 2 && (

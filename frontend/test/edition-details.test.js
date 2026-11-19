@@ -8,10 +8,11 @@ import { createServer } from 'vite'
 
 const editions = JSON.parse(readFileSync(new URL('../../backend/editions.json', import.meta.url), 'utf8'))
 const vite = await createServer({ logLevel: 'silent', server: { middlewareMode: true, hmr: false } })
-const [{ EditionDetails }, { TeamRoster }, { ChallengeList }] = await Promise.all([
+const [{ EditionDetails }, { TeamRoster }, { ChallengeList }, { ChallengeWinner }] = await Promise.all([
   vite.ssrLoadModule('/src/EditionDetails.jsx'),
   vite.ssrLoadModule('/src/TeamRoster.jsx'),
   vite.ssrLoadModule('/src/ChallengeList.jsx'),
+  vite.ssrLoadModule('/src/ChallengeWinner.jsx'),
 ]).finally(() => vite.close())
 
 function render(edition) {
@@ -22,11 +23,12 @@ test('opens each challenge with its own instructions, pending details, and illus
   const { modules } = editions.find(({ id }) => id === 'iii')
   const savedOrders = { A: [{ id: 'one', name: 'First Team' }, { id: 'two', name: 'Second Team' }] }
   const brackets = { C: { seeds: savedOrders.A, results: { 'upper-1-1': 'two' } } }
+  const winners = { B: savedOrders.A[0] }
   let opened = 0
   let focusReturns = 0
   let view
   act(() => {
-    view = create(React.createElement(ChallengeList, { modules, savedOrders, brackets }), {
+    view = create(React.createElement(ChallengeList, { modules, savedOrders, brackets, winners }), {
       createNodeMock: (node) => node.type === 'dialog'
         ? { showModal: () => { opened += 1 } }
         : null,
@@ -35,7 +37,8 @@ test('opens each challenge with its own instructions, pending details, and illus
 
   assert.deepEqual(view.root.findByType('ol').findAllByType('li')
     .map((item) => item.children.join('')), ['First Team', 'Second Team'])
-  assert.match(view.root.findByProps({ className: 'challenge-champion' }).children.join(''), /Second Team/)
+  assert.deepEqual(view.root.findAllByProps({ className: 'challenge-champion' })
+    .map((summary) => summary.children.at(-1)), ['First Team', 'Second Team'])
 
   for (const { id, challenge } of modules) {
     const trigger = view.root.findByProps({ 'aria-label': `View challenge details for ${challenge.name}` })
@@ -51,10 +54,11 @@ test('opens each challenge with its own instructions, pending details, and illus
         .map((item) => item.children.join('')), ['First Team', 'Second Team'])
     }
     const champions = dialog.findAllByProps({ className: 'challenge-champion' })
-    assert.equal(champions.length, id === 'C' ? 1 : 0)
+    assert.equal(champions.length, id === 'B' || id === 'C' ? 1 : 0)
+    if (id === 'B') assert.equal(champions[0].children.at(-1), 'First Team')
     if (id === 'C') {
       assert.match(champions[0].children.join(''), /Second Team/)
-      assert.equal(dialog.findAllByType('h5').at(-1).children.join(''), 'Champion')
+      assert.equal(dialog.findAllByType('h5').at(-1).children.join(''), 'Winner')
     }
     assert.ok(dialog.findAllByType('h3').some((heading) => heading.children.join('') === 'Awaiting release'))
     const photo = dialog.findByType('img')
@@ -73,6 +77,30 @@ test('opens each challenge with its own instructions, pending details, and illus
 
   assert.equal(opened, 4)
   assert.equal(focusReturns, 4)
+  act(() => view.unmount())
+})
+
+test('requires an available team and allows canceling or confirming a replacement winner', () => {
+  const first = { id: 'first', name: 'First Team' }
+  const second = { id: 'second', name: 'Second Team' }
+  const updates = []
+  const onConfirm = (team) => { updates.push(team); return true }
+  let view
+  act(() => { view = create(React.createElement(ChallengeWinner, { teams: [], onConfirm })) })
+  assert.equal(view.root.findByType('button').props.disabled, true)
+
+  act(() => view.update(React.createElement(ChallengeWinner, { teams: [first, second], winner: first, onConfirm })))
+  const click = (label) => act(() => view.root.findAllByType('button')
+    .find((button) => button.children.join('') === label).props.onClick())
+  click('Change winner')
+  act(() => view.root.findByType('select').props.onChange({ target: { value: second.id } }))
+  click('Cancel')
+  assert.deepEqual(updates, [])
+  assert.equal(view.root.findByProps({ role: 'status' }).children.at(-1), first.name)
+  click('Change winner')
+  act(() => view.root.findByType('select').props.onChange({ target: { value: second.id } }))
+  act(() => view.root.findByType('form').props.onSubmit({ preventDefault() {} }))
+  assert.deepEqual(updates, [second])
   act(() => view.unmount())
 })
 
