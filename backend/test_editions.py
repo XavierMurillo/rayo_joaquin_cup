@@ -1,17 +1,32 @@
 import json
+import os
 import socket
 import threading
 import time
 import unittest
+from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.error import HTTPError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
+from unittest.mock import patch
+from uuid import uuid4
 
 import uvicorn
+from PIL import Image
 
 from backend.main import app
 
 
 class EditionApiTests(unittest.TestCase):
+    def setUp(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        database_path = str(Path(directory.name) / "teams.sqlite3")
+        environment = patch.dict(os.environ, {"TEAM_DATABASE_PATH": database_path})
+        environment.start()
+        self.addCleanup(environment.stop)
+
     @classmethod
     def setUpClass(cls):
         listener = socket.socket()
@@ -75,3 +90,76 @@ class EditionApiTests(unittest.TestCase):
         with caught.exception as response:
             self.assertEqual(response.code, 404)
             self.assertEqual(json.load(response), {"detail": "Edition not found"})
+
+    def upload(self, *, edition="iii", photo=None, **fields):
+        boundary = uuid4().hex
+        form = {"name": "Example Team", "request_id": str(uuid4()), **fields}
+        parts = [
+            f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode()
+            for key, value in form.items()
+        ]
+        if photo is not None:
+            parts.append(
+                f'--{boundary}\r\nContent-Disposition: form-data; name="photo"; filename="test.png"\r\n'
+                'Content-Type: image/png\r\n\r\n'.encode() + photo + b"\r\n"
+            )
+        parts.append(f"--{boundary}--\r\n".encode())
+        request = Request(
+            f"{self.base_url}/{edition}/teams",
+            data=b"".join(parts),
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+            method="POST",
+        )
+        with urlopen(request, timeout=5) as response:
+            self.assertEqual(response.status, 201)
+            return json.load(response)
+
+    def make_png(self):
+        output = BytesIO()
+        Image.new("RGB", (3, 2), "red").save(output, "PNG")
+        return output.getvalue()
+
+    def test_creates_teams_with_default_and_custom_colors(self):
+        photo = self.make_png()
+        default_team = self.upload(photo=photo, name=" Default Team ")
+        custom_team = self.upload(photo=photo, description=" Vehicle description ", color="#0123af")
+        self.assertEqual((default_team["name"], default_team["description"], default_team["color"]),
+                         ("Default Team", "", None))
+        self.assertEqual((custom_team["description"], custom_team["color"]),
+                         ("Vehicle description", "#0123af"))
+        self.assertEqual(self.get("/iii")["teams"], [default_team, custom_team])
+        photo_url = custom_team["photoUrl"]
+        origin = self.base_url.removesuffix("/api/editions")
+        with urlopen(origin + photo_url, timeout=5) as response:
+            self.assertEqual(response.headers.get_content_type(), "image/png")
+            self.assertEqual(response.read(), photo)
+        with self.assertRaises(HTTPError) as wrong_edition:
+            urlopen(origin + photo_url.replace("/iii/", "/ii/"), timeout=5)
+        with wrong_edition.exception as response:
+            self.assertEqual(response.code, 404)
+
+    def test_rejects_invalid_uploads_without_storing_teams(self):
+        photo = self.make_png()
+        for status, parameters in [
+            (422, {}),
+            (422, {"photo": photo, "name": " "}),
+            (422, {"photo": photo, "name": "a" * 81}),
+            (422, {"photo": photo, "description": "a" * 281}),
+            (422, {"photo": photo, "color": "#invalid"}),
+            (422, {"photo": photo[:25]}),
+            (422, {"photo": b"GIF89a"}),
+            (413, {"photo": b"x" * (5 * 1024 * 1024 + 1)}),
+            (404, {"photo": photo, "edition": "ii"}),
+        ]:
+            with self.subTest(expected_status=status, fields=list(parameters)):
+                with self.assertRaises(HTTPError) as caught:
+                    self.upload(**parameters)
+                with caught.exception as response:
+                    self.assertEqual(response.code, status)
+        self.assertEqual(self.get("/iii")["teams"], [])
+
+    def test_repeated_save_request_returns_the_same_team(self):
+        fields = {"photo": self.make_png(), "request_id": str(uuid4())}
+        first = self.upload(**fields)
+        self.assertEqual(self.upload(**fields), first)
+        self.assertEqual(self.get("/iii")["teams"], [first])

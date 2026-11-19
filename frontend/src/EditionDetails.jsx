@@ -1,21 +1,35 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { TeamForm } from './TeamForm.jsx'
+import { TeamRoster } from './TeamRoster.jsx'
 
-function TeamsSection({ teams }) {
+function TeamsSection({ editionId, teams }) {
+  const [adding, setAdding] = useState(false)
+  const [addedTeams, setAddedTeams] = useState([])
+  const [message, setMessage] = useState('')
+  const visibleTeams = [...teams, ...addedTeams]
+
+  function onCreated(team) {
+    setAddedTeams((current) => [...current, team])
+    setAdding(false)
+    setMessage(`${team.name} was added.`)
+  }
+
   return (
     <section className="detail-section" id="teams">
-      <h2>Teams</h2>
-      {teams.length === 0 ? (
+      <div className="teams-heading">
+        <h2>Teams</h2>
+        {!adding && (
+          <button type="button" onClick={() => { setMessage(''); setAdding(true) }}>Add team</button>
+        )}
+      </div>
+      {adding && (
+        <TeamForm editionId={editionId} onCreated={onCreated} onCancel={() => setAdding(false)} />
+      )}
+      {message && <p role="status">{message}</p>}
+      {visibleTeams.length === 0 ? (
         <p>Team details are not available yet.</p>
       ) : (
-        <ul className="team-grid">
-          {teams.map((team) => (
-            <li key={team.id} className="panel team-card">
-              <img src={team.photoUrl} alt={team.photoAlt} loading="lazy" />
-              <h3>{team.name}</h3>
-              <p>{team.description}</p>
-            </li>
-          ))}
-        </ul>
+        <TeamRoster teams={visibleTeams} />
       )}
     </section>
   )
@@ -62,7 +76,7 @@ export function EditionDetails({ edition }) {
           ))}
         </ul>
       </section>
-      <TeamsSection teams={edition.teams ?? []} />
+      <TeamsSection editionId={edition.id} teams={edition.teams ?? []} />
       <section className="detail-section" id="evaluation">
         <h2>Evaluation</h2>
         <ul className="criteria">
