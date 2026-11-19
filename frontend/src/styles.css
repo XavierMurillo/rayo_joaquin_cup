@@ -177,6 +177,9 @@ h3 { font-size: 1.1rem; }
 .team-dialog::backdrop { background: rgb(0 0 0 / 78%); }
 .team-dialog-actions { display: flex; justify-content: end; padding: .3rem .3rem .8rem; }
 .team-dialog-actions button { margin: 0; }
+.team-dialog-controls { display: flex; flex-wrap: wrap; gap: .75rem; }
+.team-dialog .team-form { max-width: none; }
+.team-dialog { overflow: auto; }
 .team-dialog .team-card-media {
   aspect-ratio: auto;
   padding: clamp(.65rem, 2.5vw, 1.25rem);

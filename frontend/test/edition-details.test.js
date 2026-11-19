@@ -85,6 +85,7 @@ test('opens a team dialog with the full details and restores focus on close', ()
   act(() => tile.props.onClick({ currentTarget: { focus: () => { focused = true } } }))
   assert.equal(opened, true)
   const dialog = view.root.findByType('dialog')
+  assert.deepEqual(dialog.findAllByType('button').map((button) => button.children.join('')), ['Close'])
   assert.equal(dialog.findByType('h3').children.join(''), team.name)
   assert.equal(dialog.findByType('p').children.join(''), team.description)
   assert.equal(dialog.findByType('img').props.alt, team.photoAlt)
@@ -92,5 +93,32 @@ test('opens a team dialog with the full details and restores focus on close', ()
   act(() => dialog.props.onClose())
   assert.equal(view.root.findAllByType('dialog').length, 0)
   assert.equal(focused, true)
+  act(() => view.unmount())
+})
+
+test('prefills the local team edit form and allows canceling edit and deletion', () => {
+  const team = {
+    id: 'fixture', managed: true, name: 'Fixture Team', description: 'Original details',
+    color: '#1930dd', photoUrl: '/fixture.webp', photoAlt: 'Vehicle',
+  }
+  let view
+  act(() => {
+    view = create(React.createElement(TeamRoster, { editionId: 'iii', teams: [team] }), {
+      createNodeMock: (node) => node.type === 'dialog' ? { showModal() {} } : null,
+    })
+  })
+  const click = (label) => act(() => view.root.findAllByType('button')
+    .find((button) => button.children.join('') === label).props.onClick({ currentTarget: {} }))
+  act(() => view.root.findByProps({ className: 'team-tile' }).props.onClick({ currentTarget: {} }))
+  click('Edit team')
+  assert.equal(view.root.findByProps({ name: 'name' }).props.value, team.name)
+  assert.equal(view.root.findByProps({ name: 'description' }).props.value, team.description)
+  assert.equal(view.root.findByProps({ type: 'color' }).props.value, team.color)
+  assert.equal(view.root.findByProps({ name: 'photo' }).props.required, false)
+  click('Cancel')
+  click('Delete team')
+  assert.ok(view.root.findAllByType('h3').some((heading) => heading.children.join('') === 'Delete Fixture Team?'))
+  click('Cancel')
+  assert.equal(view.root.findByType('h3').children.join(''), team.name)
   act(() => view.unmount())
 })

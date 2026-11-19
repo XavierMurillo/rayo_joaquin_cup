@@ -91,7 +91,7 @@ class EditionApiTests(unittest.TestCase):
             self.assertEqual(response.code, 404)
             self.assertEqual(json.load(response), {"detail": "Edition not found"})
 
-    def upload(self, *, edition="iii", photo=None, **fields):
+    def upload(self, *, edition="iii", photo=None, team_id=None, **fields):
         boundary = uuid4().hex
         form = {"name": "Example Team", "request_id": str(uuid4()), **fields}
         parts = [
@@ -104,19 +104,22 @@ class EditionApiTests(unittest.TestCase):
                 'Content-Type: image/png\r\n\r\n'.encode() + photo + b"\r\n"
             )
         parts.append(f"--{boundary}--\r\n".encode())
+        endpoint = f"{self.base_url}/{edition}/teams"
+        if team_id is not None:
+            endpoint += f"/{team_id}"
         request = Request(
-            f"{self.base_url}/{edition}/teams",
+            endpoint,
             data=b"".join(parts),
             headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
-            method="POST",
+            method="PATCH" if team_id is not None else "POST",
         )
         with urlopen(request, timeout=5) as response:
-            self.assertEqual(response.status, 201)
+            self.assertEqual(response.status, 200 if team_id is not None else 201)
             return json.load(response)
 
-    def make_png(self):
+    def make_png(self, color="red"):
         output = BytesIO()
-        Image.new("RGB", (3, 2), "red").save(output, "PNG")
+        Image.new("RGB", (3, 2), color).save(output, "PNG")
         return output.getvalue()
 
     def test_creates_teams_with_default_and_custom_colors(self):
@@ -163,3 +166,50 @@ class EditionApiTests(unittest.TestCase):
         first = self.upload(**fields)
         self.assertEqual(self.upload(**fields), first)
         self.assertEqual(self.get("/iii")["teams"], [first])
+
+    def test_edit_keeps_identity_and_photo_until_replaced(self):
+        original = self.upload(photo=self.make_png())
+        team_id = original["id"]
+        updated = self.upload(team_id=team_id, name="New Name", description="Updated details", color="#123456")
+        self.assertEqual(updated["id"], team_id)
+        self.assertEqual(updated["photoUrl"], original["photoUrl"])
+        self.assertEqual((updated["name"], updated["description"], updated["color"]),
+                         ("New Name", "Updated details", "#123456"))
+        photo = self.make_png("blue")
+        replaced = self.upload(team_id=team_id, photo=photo, name="New Name")
+        self.assertNotEqual(replaced["photoUrl"], original["photoUrl"])
+        self.assertEqual(self.get("/iii")["teams"], [replaced])
+        origin = self.base_url.removesuffix("/api/editions")
+        with urlopen(origin + replaced["photoUrl"], timeout=5) as response:
+            self.assertEqual(response.read(), photo)
+
+    def test_invalid_edit_and_wrong_edition_leave_team_intact(self):
+        original = self.upload(photo=self.make_png())
+        for expected, fields in [(422, {"photo": b"invalid"}), (404, {"edition": "ii"}), (404, {"team_id": str(uuid4())})]:
+            with self.subTest(fields=fields):
+                with self.assertRaises(HTTPError) as caught:
+                    self.upload(**{"team_id": original["id"], **fields})
+                with caught.exception as response:
+                    self.assertEqual(response.code, expected)
+        self.assertEqual(self.get("/iii")["teams"], [original])
+
+    def test_deleting_team_removes_its_photo(self):
+        team = self.upload(photo=self.make_png())
+        for edition in ("ii", "iii"):
+            endpoint = f"{self.base_url}/{edition}/teams/{team['id']}"
+            request = Request(endpoint, method="DELETE")
+            if edition == "ii":
+                with self.assertRaises(HTTPError) as caught:
+                    urlopen(request, timeout=5)
+                with caught.exception as response:
+                    self.assertEqual(response.code, 404)
+                self.assertEqual(self.get("/iii")["teams"], [team])
+            else:
+                with urlopen(request, timeout=5) as response:
+                    self.assertEqual(response.status, 204)
+        self.assertEqual(self.get("/iii")["teams"], [])
+        origin = self.base_url.removesuffix("/api/editions")
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(origin + team["photoUrl"], timeout=5)
+        with caught.exception as response:
+            self.assertEqual(response.code, 404)
