@@ -1,6 +1,7 @@
 import os
 import sqlite3
 from contextlib import closing, contextmanager
+from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
@@ -47,20 +48,22 @@ def validate_photo(photo):
 
 
 def team_card(edition_id, row):
+    photo_version = sha256(row["photo"]).hexdigest()
     return {
         "id": row["id"],
         "name": row["name"],
         "description": row["description"],
         "color": row["color"],
-        "photoUrl": f"/api/editions/{edition_id}/teams/{row['id']}/photo",
+        "photoUrl": f"/api/editions/{edition_id}/teams/{row['id']}/photo?v={photo_version}",
         "photoAlt": f"Vehicle photo for {row['name']}",
+        "managed": True,
     }
 
 
 def list_teams(edition_id):
     with team_database() as database:
         rows = database.execute(
-            "SELECT id, name, description, color FROM teams WHERE edition_id = ? ORDER BY rowid",
+            "SELECT id, name, description, color, photo FROM teams WHERE edition_id = ? ORDER BY rowid",
             (edition_id,),
         )
         return [team_card(edition_id, row) for row in rows]
@@ -74,10 +77,29 @@ def save_team(edition_id, request_id, name, description, color, media_type, phot
             (edition_id, str(uuid4()), request_id, name, description, color, media_type, photo),
         )
         row = database.execute(
-            "SELECT id, name, description, color FROM teams WHERE edition_id = ? AND request_id = ?",
+            "SELECT id, name, description, color, photo FROM teams WHERE edition_id = ? AND request_id = ?",
             (edition_id, request_id),
         ).fetchone()
         return team_card(edition_id, row)
+
+
+def update_team(edition_id, team_id, name, description, color, media_type, photo):
+    with team_database() as database:
+        row = database.execute(
+            """UPDATE teams SET name = ?, description = ?, color = ?,
+               media_type = COALESCE(?, media_type), photo = COALESCE(?, photo)
+               WHERE edition_id = ? AND id = ?
+               RETURNING id, name, description, color, photo""",
+            (name, description, color, media_type, photo, edition_id, team_id),
+        ).fetchone()
+        return team_card(edition_id, row) if row else None
+
+
+def delete_team(edition_id, team_id):
+    with team_database() as database:
+        return database.execute(
+            "DELETE FROM teams WHERE edition_id = ? AND id = ?", (edition_id, team_id)
+        ).rowcount == 1
 
 
 def get_photo(edition_id, team_id):

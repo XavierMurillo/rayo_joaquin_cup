@@ -1,35 +1,51 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { TeamForm } from './TeamForm.jsx'
 import { TeamRoster } from './TeamRoster.jsx'
 
 function TeamsSection({ editionId, teams }) {
   const [adding, setAdding] = useState(false)
-  const [addedTeams, setAddedTeams] = useState([])
+  const [visibleTeams, setVisibleTeams] = useState(teams)
   const [message, setMessage] = useState('')
-  const visibleTeams = [...teams, ...addedTeams]
+  const addButton = useRef(null)
+  const section = useRef(null)
 
   function onCreated(team) {
-    setAddedTeams((current) => [...current, team])
+    setVisibleTeams((current) => [...current, team])
     setAdding(false)
     setMessage(`${team.name} was added.`)
   }
 
+  function onUpdated(team) {
+    setVisibleTeams((current) => current.map((item) => item.id === team.id ? team : item))
+  }
+
+  function onDeleted(team) {
+    setVisibleTeams((current) => current.filter((item) => item.id !== team.id))
+    setMessage(`${team.name} was deleted.`)
+  }
+
   return (
-    <section className="detail-section" id="teams">
+    <section className="detail-section" id="teams" tabIndex={-1} ref={section}>
       <div className="teams-heading">
         <h2>Teams</h2>
         {!adding && (
-          <button type="button" onClick={() => { setMessage(''); setAdding(true) }}>Add team</button>
+          <button ref={addButton} type="button" onClick={() => { setMessage(''); setAdding(true) }}>Add team</button>
         )}
       </div>
       {adding && (
-        <TeamForm editionId={editionId} onCreated={onCreated} onCancel={() => setAdding(false)} />
+        <TeamForm editionId={editionId} onSaved={onCreated} onCancel={() => setAdding(false)} />
       )}
       {message && <p role="status">{message}</p>}
       {visibleTeams.length === 0 ? (
         <p>Team details are not available yet.</p>
       ) : (
-        <TeamRoster teams={visibleTeams} />
+        <TeamRoster
+          editionId={editionId}
+          teams={visibleTeams}
+          onUpdated={onUpdated}
+          onDeleted={onDeleted}
+          focusFallback={() => (addButton.current ?? section.current)?.focus()}
+        />
       )}
     </section>
   )

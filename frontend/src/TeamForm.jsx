@@ -5,15 +5,16 @@ const defaultColor = '#1b1b1b'
 const photoTypes = ['image/jpeg', 'image/png', 'image/webp']
 const maxPhotoBytes = 5 * 1024 * 1024
 
-export function TeamForm({ editionId, onCreated, onCancel }) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
+export function TeamForm({ editionId, team, onSaved, onCancel }) {
+  const [name, setName] = useState(team?.name ?? '')
+  const [description, setDescription] = useState(team?.description ?? '')
   const [photo, setPhoto] = useState(null)
   const [preview, setPreview] = useState('')
-  const [color, setColor] = useState('')
+  const [color, setColor] = useState(team?.color ?? '')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const requestId = useRef(null)
+  const fileInput = useRef(null)
 
   useEffect(() => {
     if (!photo) return
@@ -24,11 +25,13 @@ export function TeamForm({ editionId, onCreated, onCancel }) {
 
   function choosePhoto(event) {
     const file = event.target.files[0]
+    event.target.setCustomValidity('')
     setPhoto(null)
     if (!file) return
     if ((file.type && !photoTypes.includes(file.type)) || file.size > maxPhotoBytes) {
-      setError('Choose a JPEG, PNG, or WebP photo up to 5 MiB.')
-      event.target.value = ''
+      const message = 'Choose a JPEG, PNG, or WebP photo up to 5 MiB.'
+      setError(message)
+      event.target.setCustomValidity(message)
       return
     }
     setError('')
@@ -39,18 +42,22 @@ export function TeamForm({ editionId, onCreated, onCancel }) {
     event.preventDefault()
     if (saving) return
     const data = new FormData(event.currentTarget)
-    if (!data.get('name').trim() || !photo) {
+    if (!data.get('name').trim() || (!team && !photo)) {
       setError('Enter a team name and choose a vehicle photo.')
       return
     }
-    requestId.current ??= crypto.randomUUID()
-    data.set('request_id', requestId.current)
+    if (!team) {
+      requestId.current ??= crypto.randomUUID()
+      data.set('request_id', requestId.current)
+    }
+    if (!photo) data.delete('photo')
     data.set('color', color)
     setSaving(true)
     setError('')
     try {
-      const response = await fetch(`/api/editions/${encodeURIComponent(editionId)}/teams`, {
-        method: 'POST',
+      const endpoint = `/api/editions/${encodeURIComponent(editionId)}/teams`
+      const response = await fetch(team ? `${endpoint}/${encodeURIComponent(team.id)}` : endpoint, {
+        method: team ? 'PATCH' : 'POST',
         body: data,
       })
       if (!response.ok) {
@@ -59,7 +66,7 @@ export function TeamForm({ editionId, onCreated, onCancel }) {
         setError(message)
         return
       }
-      onCreated(await response.json())
+      onSaved(await response.json())
     } catch {
       setError('Couldn’t save the team. Try again.')
     } finally {
@@ -70,7 +77,7 @@ export function TeamForm({ editionId, onCreated, onCancel }) {
   return (
     <form className="panel team-form" onSubmit={submit} onChange={() => { requestId.current = null }}>
       <fieldset disabled={saving}>
-        <legend>Add team</legend>
+        <legend>{team ? 'Edit team' : 'Add team'}</legend>
         <label>
           Team name
           <input name="name" required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} />
@@ -80,9 +87,15 @@ export function TeamForm({ editionId, onCreated, onCancel }) {
           <textarea name="description" maxLength={280} rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
         </label>
         <label>
-          Vehicle photo
-          <input name="photo" type="file" accept={photoTypes.join(',')} required onChange={choosePhoto} />
+          {team ? 'Replace vehicle photo (optional)' : 'Vehicle photo'}
+          <input ref={fileInput} name="photo" type="file" accept={photoTypes.join(',')} required={!team} onChange={choosePhoto} />
         </label>
+        {team && <button type="button" onClick={() => {
+          fileInput.current.value = ''
+          fileInput.current.setCustomValidity('')
+          setPhoto(null)
+          setError('')
+        }}>Keep current photo</button>}
         <p className="field-hint">JPEG, PNG, or WebP. Up to 5 MiB.</p>
         <div className="team-form-actions">
           <label>
@@ -91,12 +104,12 @@ export function TeamForm({ editionId, onCreated, onCancel }) {
           </label>
           <button type="button" onClick={() => { setColor(''); requestId.current = null }} disabled={!color}>Reset color</button>
         </div>
-        {photo && preview && (
+        {((photo && preview) || team?.photoUrl) && (
           <TeamCard team={{
             name: name.trim() || 'Team name',
             description: description.trim(),
-            photoUrl: preview,
-            photoAlt: 'Selected vehicle photo preview',
+            photoUrl: photo && preview ? preview : team?.photoUrl,
+            photoAlt: 'Vehicle photo preview',
             color,
           }} />
         )}
