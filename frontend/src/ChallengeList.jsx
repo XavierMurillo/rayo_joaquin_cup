@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { BracketView } from './ChallengeBrackets.jsx'
+import { buildBracket } from './brackets.js'
 
 function SavedRunningOrder({ order }) {
   if (!order?.length) return null
@@ -11,7 +13,11 @@ function SavedRunningOrder({ order }) {
   )
 }
 
-function ChallengeDialog({ challenge, savedOrder, onClose }) {
+function ChampionSummary({ team }) {
+  return team ? <p className="challenge-champion"><strong>Champion</strong> · {team.name}</p> : null
+}
+
+function ChallengeDialog({ challenge, challengeId, savedOrder, bracket, champion, onClose }) {
   const dialog = useRef(null)
 
   useEffect(() => {
@@ -24,6 +30,7 @@ function ChallengeDialog({ challenge, savedOrder, onClose }) {
         <button type="button" onClick={() => dialog.current.close()}>Close</button>
       </div>
       <h2 id="challenge-dialog-title">{challenge.name}</h2>
+      <ChampionSummary team={champion} />
       <div className={challenge.visual ? 'challenge-detail-layout' : undefined}>
         <div>
           {challenge.sections.map(({ heading, text }) => (
@@ -47,13 +54,17 @@ function ChallengeDialog({ challenge, savedOrder, onClose }) {
           </figure>
         )}
       </div>
+      {bracket && <BracketView state={bracket} challengeId={challengeId} />}
     </dialog>
   )
 }
 
-export function ChallengeList({ modules, savedOrders = {} }) {
+export function ChallengeList({ modules, savedOrders = {}, brackets = {}, onChooseBracket }) {
   const [selected, setSelected] = useState(null)
   const opener = useRef(null)
+  const champions = Object.fromEntries(Object.entries(brackets)
+    .filter(([, bracket]) => bracket)
+    .map(([id, bracket]) => [id, buildBracket(bracket, id === 'D').champion]))
 
   return (
     <>
@@ -63,7 +74,11 @@ export function ChallengeList({ modules, savedOrders = {} }) {
             <h3><span className="module-letter">{id}</span>{challenge?.name ?? title}</h3>
             {challenge && <p className="challenge-module">{title}</p>}
             <p>{description}</p>
+            <ChampionSummary team={champions[id]} />
             <SavedRunningOrder order={savedOrders[id]} />
+            {onChooseBracket && Object.hasOwn(brackets, id) && (
+              <p><a href="#challenge-brackets" onClick={() => onChooseBracket(id)}>Open {challenge.name} bracket</a></p>
+            )}
             {challenge && (
               <button
                 type="button"
@@ -81,7 +96,9 @@ export function ChallengeList({ modules, savedOrders = {} }) {
         ))}
       </ul>
       {selected && (
-        <ChallengeDialog challenge={selected.challenge} savedOrder={savedOrders[selected.id]} onClose={() => {
+        <ChallengeDialog challenge={selected.challenge} challengeId={selected.id}
+          savedOrder={savedOrders[selected.id]} bracket={brackets[selected.id]}
+          champion={champions[selected.id]} onClose={() => {
           setSelected(null)
           opener.current?.focus()
         }} />

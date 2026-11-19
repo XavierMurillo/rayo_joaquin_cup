@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { ChallengeList } from './ChallengeList.jsx'
+import { ChallengeBrackets } from './ChallengeBrackets.jsx'
+import { loadBracket, saveBracket } from './brackets.js'
 import { TeamForm } from './TeamForm.jsx'
 import { TeamRoster } from './TeamRoster.jsx'
 import { TeamRoulette } from './TeamRoulette.jsx'
@@ -58,6 +60,10 @@ export function EditionDetails({ edition }) {
   const [savedOrders, setSavedOrders] = useState(() => Object.fromEntries(
     (edition.modules ?? []).map(({ id }) => [id, loadSavedOrder(edition.id, id)]),
   ))
+  const [brackets, setBrackets] = useState(() => edition.id === 'iii' ? {
+    C: loadBracket(edition.id, 'C'), D: loadBracket(edition.id, 'D'),
+  } : {})
+  const [bracketChallenge, setBracketChallenge] = useState('C')
   if (edition.status === 'unavailable') {
     return (
       <section className="hero">
@@ -71,6 +77,14 @@ export function EditionDetails({ edition }) {
   const rouletteChallenges = edition.id === 'iii'
     ? edition.modules.filter(({ id, challenge }) => challenge && (id === 'A' || id === 'B'))
     : []
+  const bracketChallenges = edition.id === 'iii'
+    ? edition.modules.filter(({ id, challenge }) => challenge && (id === 'C' || id === 'D'))
+    : []
+
+  function updateBracket(challengeId, state) {
+    setBrackets((current) => ({ ...current, [challengeId]: state }))
+    return saveBracket(edition.id, challengeId, state)
+  }
 
   function saveOrder(challengeId, draw) {
     if (!storeDraw(savedOrderKey(edition.id, challengeId), draw)) return false
@@ -99,7 +113,12 @@ export function EditionDetails({ edition }) {
         <h2>Challenges</h2>
         <p><strong>Platform:</strong> {edition.platform}</p>
         <p>All four modules must be integrated, tested, and ready to run.</p>
-        <ChallengeList modules={edition.modules} savedOrders={savedOrders} />
+        <ChallengeList
+          modules={edition.modules}
+          savedOrders={savedOrders}
+          brackets={brackets}
+          onChooseBracket={bracketChallenges.length === 2 ? setBracketChallenge : undefined}
+        />
       </section>
       <TeamsSection editionId={edition.id} teams={teams} setTeams={setTeams} />
       <section className="detail-section evaluation-section" id="evaluation">
@@ -118,6 +137,16 @@ export function EditionDetails({ edition }) {
             teams={teams}
             savedOrders={savedOrders}
             onSave={saveOrder}
+          />
+        )}
+        {bracketChallenges.length === 2 && (
+          <ChallengeBrackets
+            challenges={bracketChallenges}
+            teams={teams}
+            brackets={brackets}
+            selected={bracketChallenge}
+            onSelect={setBracketChallenge}
+            onUpdate={updateBracket}
           />
         )}
       </section>

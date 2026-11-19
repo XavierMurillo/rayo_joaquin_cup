@@ -21,11 +21,12 @@ function render(edition) {
 test('opens each challenge with its own instructions, pending details, and illustration', () => {
   const { modules } = editions.find(({ id }) => id === 'iii')
   const savedOrders = { A: [{ id: 'one', name: 'First Team' }, { id: 'two', name: 'Second Team' }] }
+  const brackets = { C: { seeds: savedOrders.A, results: { 'upper-1-1': 'two' } } }
   let opened = 0
   let focusReturns = 0
   let view
   act(() => {
-    view = create(React.createElement(ChallengeList, { modules, savedOrders }), {
+    view = create(React.createElement(ChallengeList, { modules, savedOrders, brackets }), {
       createNodeMock: (node) => node.type === 'dialog'
         ? { showModal: () => { opened += 1 } }
         : null,
@@ -34,19 +35,26 @@ test('opens each challenge with its own instructions, pending details, and illus
 
   assert.deepEqual(view.root.findByType('ol').findAllByType('li')
     .map((item) => item.children.join('')), ['First Team', 'Second Team'])
+  assert.match(view.root.findByProps({ className: 'challenge-champion' }).children.join(''), /Second Team/)
 
   for (const { id, challenge } of modules) {
     const trigger = view.root.findByProps({ 'aria-label': `View challenge details for ${challenge.name}` })
     act(() => trigger.props.onClick({ currentTarget: { focus: () => { focusReturns += 1 } } }))
     const dialog = view.root.findByType('dialog')
     assert.equal(dialog.findByType('h2').children.join(''), challenge.name)
-    assert.deepEqual(dialog.findByType('ul').findAllByType('li')
+    assert.deepEqual(dialog.findByProps({ className: 'notice challenge-instruction' }).findAllByType('li')
       .map((item) => item.children.join('')), challenge.pending)
     const runningOrder = dialog.findAllByType('ol')
     assert.equal(runningOrder.length, id === 'A' ? 1 : 0)
     if (id === 'A') {
       assert.deepEqual(runningOrder[0].findAllByType('li')
         .map((item) => item.children.join('')), ['First Team', 'Second Team'])
+    }
+    const champions = dialog.findAllByProps({ className: 'challenge-champion' })
+    assert.equal(champions.length, id === 'C' ? 1 : 0)
+    if (id === 'C') {
+      assert.match(champions[0].children.join(''), /Second Team/)
+      assert.equal(dialog.findAllByType('h5').at(-1).children.join(''), 'Champion')
     }
     assert.ok(dialog.findAllByType('h3').some((heading) => heading.children.join('') === 'Awaiting release'))
     const photo = dialog.findByType('img')
