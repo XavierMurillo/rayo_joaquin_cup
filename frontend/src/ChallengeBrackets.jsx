@@ -106,7 +106,7 @@ export function BracketView({ state, challengeId, onUpdate }) {
             ))}
             {finalChampion && (
               <section className="bracket-round" data-incoming="true">
-                <h5>Champion</h5>
+                <h5>Winner</h5>
                 <div className="bracket-match-slots">
                   <div className="bracket-slot">
                     <p className="bracket-match bracket-champion" role="status">{finalChampion.name}</p>

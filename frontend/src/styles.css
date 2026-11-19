@@ -297,6 +297,9 @@ h3 { font-size: 1.1rem; }
 .evaluation-section .team-roulette { border-color: #72464c; background: #24171c; }
 .evaluation-section .criteria li { border-color: #99666d; }
 .team-roulette { margin-top: 1rem; }
+.challenge-winner-controls { margin-top: 1rem; padding-top: .75rem; border-top: 1px solid #72464c; }
+.challenge-winner-controls form { margin-top: .75rem; }
+.challenge-winner-controls button:disabled { opacity: .6; cursor: default; }
 .team-roulette label { display: block; margin-bottom: .4rem; }
 .team-roulette select {
   max-width: 100%;
