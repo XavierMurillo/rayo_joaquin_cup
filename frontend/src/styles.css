@@ -166,7 +166,7 @@ h3 { font-size: 1.1rem; }
   font-weight: 850;
   text-align: center;
 }
-.team-dialog {
+.team-dialog, .challenge-dialog {
   width: min(48rem, calc(100% - 2rem));
   max-height: calc(100% - 2rem);
   padding: .8rem;
@@ -174,7 +174,25 @@ h3 { font-size: 1.1rem; }
   background: #101010;
   color: #fafafa;
 }
-.team-dialog::backdrop { background: rgb(0 0 0 / 78%); }
+.team-dialog::backdrop, .challenge-dialog::backdrop { background: rgb(0 0 0 / 78%); }
+.challenge-dialog {
+  width: min(88rem, calc(100% - 1rem));
+  max-height: calc(100% - 1rem);
+  overflow: auto;
+  padding: clamp(1rem, 3vw, 1.75rem);
+}
+.challenge-detail-layout { display: grid; gap: clamp(1.25rem, 3vw, 2.5rem); }
+@media (min-width: 56rem) {
+  .challenge-detail-layout { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
+}
+.challenge-module { margin-top: 0; color: var(--muted); font-weight: 650; }
+.challenge-instruction { margin-top: 1.25rem; }
+.challenge-instruction h3 { margin: 0 0 .35rem; }
+.challenge-instruction p, .challenge-instruction ul { margin: 0; }
+.challenge-instruction ul { padding-inline-start: 1.35rem; line-height: 1.6; }
+.challenge-visual { margin: 0; }
+.challenge-visual img { display: block; width: 100%; height: auto; }
+.challenge-visual figcaption { margin-bottom: .65rem; color: var(--muted); line-height: 1.5; }
 .team-dialog-actions { display: flex; justify-content: end; padding: .3rem .3rem .8rem; }
 .team-dialog-actions button { margin: 0; }
 .team-dialog-controls { display: flex; flex-wrap: wrap; gap: .75rem; }

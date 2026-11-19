@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react'
+import { ChallengeList } from './ChallengeList.jsx'
 import { TeamForm } from './TeamForm.jsx'
 import { TeamRoster } from './TeamRoster.jsx'
 
@@ -83,14 +84,7 @@ export function EditionDetails({ edition }) {
         <h2>Challenges</h2>
         <p><strong>Platform:</strong> {edition.platform}</p>
         <p>All four modules must be integrated, tested, and ready to run.</p>
-        <ul className="module-grid">
-          {edition.modules.map((module) => (
-            <li key={module.id} className="panel">
-              <h3><span className="module-letter">{module.id}</span>{module.title}</h3>
-              <p>{module.description}</p>
-            </li>
-          ))}
-        </ul>
+        <ChallengeList modules={edition.modules} />
       </section>
       <TeamsSection editionId={edition.id} teams={edition.teams ?? []} />
       <section className="detail-section" id="evaluation">
