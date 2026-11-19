@@ -8,14 +8,54 @@ import { createServer } from 'vite'
 
 const editions = JSON.parse(readFileSync(new URL('../../backend/editions.json', import.meta.url), 'utf8'))
 const vite = await createServer({ logLevel: 'silent', server: { middlewareMode: true, hmr: false } })
-const [{ EditionDetails }, { TeamRoster }] = await Promise.all([
+const [{ EditionDetails }, { TeamRoster }, { ChallengeList }] = await Promise.all([
   vite.ssrLoadModule('/src/EditionDetails.jsx'),
   vite.ssrLoadModule('/src/TeamRoster.jsx'),
+  vite.ssrLoadModule('/src/ChallengeList.jsx'),
 ]).finally(() => vite.close())
 
 function render(edition) {
   return renderToStaticMarkup(React.createElement(EditionDetails, { edition }))
 }
+
+test('opens each challenge with its own instructions, pending details, and illustration', () => {
+  const { modules } = editions.find(({ id }) => id === 'iii')
+  let opened = 0
+  let focusReturns = 0
+  let view
+  act(() => {
+    view = create(React.createElement(ChallengeList, { modules }), {
+      createNodeMock: (node) => node.type === 'dialog'
+        ? { showModal: () => { opened += 1 } }
+        : null,
+    })
+  })
+
+  for (const { challenge } of modules) {
+    const trigger = view.root.findByProps({ 'aria-label': `View challenge details for ${challenge.name}` })
+    act(() => trigger.props.onClick({ currentTarget: { focus: () => { focusReturns += 1 } } }))
+    const dialog = view.root.findByType('dialog')
+    assert.equal(dialog.findByType('h2').children.join(''), challenge.name)
+    assert.deepEqual(dialog.findAllByType('li').map((item) => item.children.join('')), challenge.pending)
+    assert.ok(dialog.findAllByType('h3').some((heading) => heading.children.join('') === 'Awaiting release'))
+    const photo = dialog.findByType('img')
+    assert.equal(photo.props.src, challenge.visual.src)
+    assert.equal(photo.props.alt, challenge.visual.alt)
+    assert.match(dialog.findByType('figcaption').children.join(''), /Illustration only/)
+    assert.ok(readFileSync(new URL(`../public${challenge.visual.src}`, import.meta.url)).length > 0)
+    if (challenge.name === 'Clear the Arena') {
+      const instructions = dialog.findAllByType('p').map((item) => item.children.join('')).join(' ')
+      assert.match(instructions, /one vehicle in its own arena/)
+      assert.match(instructions, /The first team to clear all its targets wins/)
+    }
+    act(() => dialog.props.onClose())
+    assert.equal(view.root.findAllByType('dialog').length, 0)
+  }
+
+  assert.equal(opened, 4)
+  assert.equal(focusReturns, 4)
+  act(() => view.unmount())
+})
 
 test('shows historical edition notices', () => {
   for (const edition of editions.slice(0, 2)) {

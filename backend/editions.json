@@ -16,26 +16,64 @@
       {
         "id": "A",
         "title": "Real-Time Visual Tracking & Closed-Loop Control",
+        "challenge": {
+          "name": "Lead and Follow",
+          "visual": {"src": "/challenge-illustrations/challenge1.jpeg", "alt": "A following vehicle tracks a lead vehicle along a route and maintains the assigned distance.", "caption": "Illustration only. The depicted attempts, route, and marker are examples pending confirmation."},
+          "sections": [
+            {"heading": "How it works", "text": "Two vehicles run together. The leader drives the assigned movement pattern. The follower tracks the leader and tries to maintain the assigned distance, in centimeters, throughout the run."},
+            {"heading": "What to prepare", "text": "Configure your vehicle to perform both roles. Be ready to load the movement pattern for leading and set the target distance for following."},
+            {"heading": "How to win", "text": "The vehicle with the best combined performance as leader and follower wins."}
+          ],
+          "pending": ["Movement pattern and target distance", "Starting positions", "How lead and follow performance are measured and combined"]
+        },
         "description": "Use HSV color segmentation on the Raspberry Pi 5 to detect the target and estimate its offset and distance. Send the measurements over serial to a proportional or PID differential controller. Follow a moving target at 25–45 cm while maintaining sight and avoiding collisions during sudden stops."
       },
       {
         "id": "B",
         "title": "Visual State Machine & Timed Actuation (Timed FSM)",
+        "challenge": {
+          "name": "Recognize and React",
+          "visual": {"src": "/challenge-illustrations/challenge2.jpeg", "alt": "A vehicle scans colored shapes and then performs a sequence of movements.", "caption": "Illustration only. The rounds, cue mappings, and procedure shown are examples pending confirmation."},
+          "sections": [
+            {"heading": "How it works", "text": "Your vehicle reads visual cues made up of colors and shapes. For each cue, identify the color and shape, then execute the action assigned to that combination."},
+            {"heading": "What to prepare", "text": "Be ready to configure which action the vehicle performs for each cue."}
+          ],
+          "pending": ["Colors, shapes, and the action assigned to each cue", "Cue presentation, sequence length if applicable, and when to start executing", "How recognition and execution will be scored"]
+        },
         "description": "Recognize and store a sequence of colors under varying lighting. Translate it into an ordered action queue and use the microcontroller to execute moves and LED patterns with configurable durations received over serial."
       },
       {
         "id": "C",
         "title": "Reactive Arena Navigation & Perimeter Boundary Safety",
+        "challenge": {
+          "name": "Clear the Arena",
+          "visual": {"src": "/challenge-illustrations/challenge3.jpeg", "alt": "Two separate arenas, each with a vehicle clearing target objects while detecting the boundary.", "caption": "Illustration only. The time limit, boundary measurements, and fallback scoring shown are examples pending confirmation."},
+          "sections": [
+            {"heading": "How it works", "text": "Two teams compete, each with one vehicle in its own arena. Find and clear every object that matches the announced target color or shape while keeping your vehicle inside its boundary."},
+            {"heading": "What to prepare", "text": "Prepare your vehicle to identify the target and respond when it approaches the perimeter."},
+            {"heading": "How to win", "text": "The first team to clear all its targets wins."}
+          ],
+          "pending": ["Target color or shape", "Arena layout and starting positions", "What counts as clearing an object, the time limit, and how boundary violations affect the result"]
+        },
         "description": "Sweep rotationally to center a target in the camera frame. Give floor reflectance or forward distance sensors priority on the microcontroller. When the vehicle detects the boundary, interrupt navigation, brake, reverse, and turn away before resuming the search."
       },
       {
         "id": "D",
         "title": "Real-Time Wireless Teleoperation",
+        "challenge": {
+          "name": "Vehicle Soccer",
+          "visual": {"src": "/challenge-illustrations/challenge4.jpeg", "alt": "Two remote-controlled vehicles approach a ball at the center of a field with a goal at each end.", "caption": "Illustration only. The match length, lineup, and overtime rules shown are examples pending confirmation."},
+          "sections": [
+            {"heading": "How it works", "text": "Drive your vehicle by remote control and score by moving the ball into the opposing goal."},
+            {"heading": "What to prepare", "text": "Prepare your wireless controls for quick changes in direction and speed so you can approach the ball, line up a shot, and defend your goal."}
+          ],
+          "pending": ["Match format and vehicle count", "Ball and field setup", "Scoring, restart rules, and permitted contact"]
+        },
         "description": "Control throttle and steering with low latency over Bluetooth or Wi-Fi using a controller, smartphone, or PC."
       }
     ],
     "teams": [],
     "criteria": ["Modularity", "Autonomy", "Robustness", "Smoothness", "Ease of operation"],
-    "announcements": "Target colors, sequence lengths, arena dimensions, specific operational rules, wireless mystery challenge rules, and further evaluation details will be announced on event day."
+    "announcements": "Open each challenge for its instructions and details awaiting release, including target colors, sequence lengths, arena dimensions, vehicle soccer rules, and remaining evaluation details."
   }
 ]
